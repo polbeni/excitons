@@ -87,7 +87,7 @@ def rt_potential(q, dielec_layer, dielec_out, thick_layer):
     electron_charge = 1 # some units
     vacuum_permittivity = 0.05526 # nm/fs
 
-    r_0 = thick_layer * ((dielec_layer) / (dielec_out))
+    r_0 = thick_layer * ((dielec_layer) / (2 * dielec_out))
 
     potential = (electron_charge**2) / (2 * vacuum_permittivity * dielec_out  * abs(q) * (1 + (r_0 * abs(q))))
 
@@ -119,23 +119,23 @@ def eigen_hamiltonian(hamiltonian):
 relative_mass = 0.108 * 5.68568 # fs^2eV/nm^2
 dielectric_layer = 6.1
 dielectric_outside = 3.32
-state = 1
+state = 0
 thickness_layer = 0.636
 
 k_min = 0.001
-k_max = 1.5
-number_points_k = 200
+k_max = 5
+number_points_k = 400
 k_mesh = np.linspace(k_min, k_max, number_points_k)
 k_step = (k_max - k_min) / number_points_k
 
 theta_min = 0
 theta_max = 2 * np.pi
-number_points_theta = 100
+number_points_theta = 250
 theta_mesh = np.linspace(theta_min, theta_max, number_points_theta, endpoint=False)
 theta_step = (theta_max - theta_min) / (number_points_theta-1)
 our_hamiltonian = compute_hamiltonian(relative_mass, k_mesh, k_step, dielectric_layer, dielectric_outside, state, thickness_layer, theta_mesh, theta_step)
 eigenvalues, eigenvectors = eigen_hamiltonian(our_hamiltonian)
-print(eigenvalues)
+print(eigenvalues[:] * 1000) # in meV
 
 
 plt.figure()
