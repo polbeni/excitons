@@ -123,23 +123,47 @@ state = 0
 thickness_layer = 0.636
 
 k_min = 0.001
-k_max = 5
-number_points_k = 400
+k_max = 2.5
+number_points_k = 200
 k_mesh = np.linspace(k_min, k_max, number_points_k)
 k_step = (k_max - k_min) / number_points_k
 
 theta_min = 0
 theta_max = 2 * np.pi
-number_points_theta = 250
+number_points_theta = 100
 theta_mesh = np.linspace(theta_min, theta_max, number_points_theta, endpoint=False)
 theta_step = (theta_max - theta_min) / (number_points_theta-1)
 our_hamiltonian = compute_hamiltonian(relative_mass, k_mesh, k_step, dielectric_layer, dielectric_outside, state, thickness_layer, theta_mesh, theta_step)
 eigenvalues, eigenvectors = eigen_hamiltonian(our_hamiltonian)
-print(eigenvalues[:] * 1000) # in meV
 
+print('The Exciton Binding Energies are: ')
+for level in range(5):
+    print(f'    The exciton level 1{level + 1} has a binding energy of: {int(eigenvalues[level] * -1000)} meV')
 
-plt.figure()
+# plot the results
+fig, ax = plt.subplots(2, 1, figsize=(4, 5))
+ax[0].set_title('Eigenvalues')
+ax[0].set_ylabel('Exciton binding energy (meV)')
+ax[0].set_xlabel('Excitonic level')
+
+ax[1].set_title('Eigenvectors')
+ax[1].set_ylabel('Wavefunctions')
+ax[1].set_xlabel('Momentum (nm$^{-1}$)')
+
+ax[0].set_xlim(0, 6)
+
+ax[0].plot([1, 2, 3, 4, 5], eigenvalues[0:5] * -1000, marker='o', linestyle='')
+
+ax[1].set_xlim(0, 1)
+
 for x in range(3):
-    plt.plot(k_mesh, eigenvectors[:, x], label=f'Exciton wavefunction {x + 1}')
-plt.legend()
-plt.show()
+    ax[1].plot(k_mesh, eigenvectors[:, x], label=f'{x + 1}s')
+
+ax[1].legend(frameon=False)
+
+before = [1, 2, 3, 4, 5]
+after = ['1s', '2s', '3s', '4s', '5s']
+ax[0].set_xticks(ticks=before, labels=after)
+
+plt.tight_layout()
+plt.savefig('results.pdf')
