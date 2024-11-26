@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # functions
-def compute_wannier_matrix(m_r, k_mesh, k_step, dielec_layer, dielec_out, state, thick_layer, theta_mesh, theta_step):
+def compute_wannier_matrix(m_r, k_mesh, k_step, dielec_layer, dielec_out, l_quantum_number, thick_layer, theta_mesh, theta_step):
     """
     It determines the Wannier matrix of the Wannier equation
 
@@ -18,7 +18,7 @@ def compute_wannier_matrix(m_r, k_mesh, k_step, dielec_layer, dielec_out, state,
         k_step -> step in the k_mesh (homogeneous mesh assumed)
         dielec_layer -> dielectric constant of the monolayer
         dielec_out -> dielectric constant of the surroundings of the layer
-        state -> the quantum number of the excitonic system (L=0: s, L=1: p, ...)
+        l_quantum_number -> the azimuthal quantum number of the excitonic system (L=0: s, L=1: p, ...)
         thick_layer -> thickness of the monolayer
         theta_mesh -> array with the mesh of the theta angle
         theta_step -> step in the theta_mesh (homogeneous mesh assumed)
@@ -37,20 +37,20 @@ def compute_wannier_matrix(m_r, k_mesh, k_step, dielec_layer, dielec_out, state,
                     continue
                 else:
                     q_element = np.sqrt((k_mesh[i_index]**2) + (k_mesh[j_index]**2) - (2*k_mesh[i_index]*k_mesh[j_index]*np.cos(theta_mesh[theta_index])))
-                    V_coul = V_coul + pot_rt(q_element, dielec_layer, dielec_out, thick_layer, state, theta_mesh[theta_index])
+                    V_coul = V_coul + pot_rt(q_element, dielec_layer, dielec_out, thick_layer, l_quantum_number, theta_mesh[theta_index])
 
             V_coul = V_coul * ((electron_charge**2) / (((2*np.pi)**2) * vacuum_permittivity * dielec_out)) * k_mesh[j_index] * k_step * theta_step
 
             w_ij[i_index, j_index] = -V_coul
 
             if i_index == j_index:
-                w_ij[i_index, j_index] = w_ij[i_index, j_index] + (((hbar**2) * (k_mesh[i_index]**2)) / (2 * m_r)) + E_gap
+                w_ij[i_index, j_index] = w_ij[i_index, j_index] + (((hbar**2) * (k_mesh[i_index]**2)) / (2 * m_r)) 
 
     return w_ij
 
 
 
-def pot_rt(q_element, dielec_layer, dielec_out, thick_layer, state, theta_i):
+def pot_rt(q_element, dielec_layer, dielec_out, thick_layer, l_quantum_number, theta_i):
     """
     Computes the Rytova-Keldysh potential as described in: https://doi.org/10.1021/acs.jpclett.0c02661
 
@@ -59,7 +59,7 @@ def pot_rt(q_element, dielec_layer, dielec_out, thick_layer, state, theta_i):
         dielec_layer -> dielectric constant of the monolayer
         dielec_out -> dielectric constant of the surroundings of the layer
         thick_layer -> thickness of the monolayer
-        state -> the quantum number of the excitonic system (L=0: s, L=1: p, ...)
+        l_quantum_number -> the azimuthal quantum number of the excitonic system (L=0: s, L=1: p, ...)
         theta_i -> the theta angle for the correspondent term in the sum
     """
 
@@ -68,22 +68,28 @@ def pot_rt(q_element, dielec_layer, dielec_out, thick_layer, state, theta_i):
     if q_element == 0:
         value = 0
     else:
-        value = (1 / (q_element * (1 + q_element * r_0))) * np.exp(1j * state * theta_i)
+        value = (1 / (q_element * (1 + q_element * r_0))) * np.exp(1j * l_quantum_number * theta_i)
 
     return value
 
 
 def diagonalize_matrix(matrix):
     """
-    Determines the eigenvalues and eigenvectors of a given hamiltonian
+    Determines the eigenvalues and eigenvectors of a given (not hermitian matrix), and sort the eigenvalues
+    and eigenvectors by the value of eiegenvalues
 
     Inputs:
         matrix -> the matrix we want to diagonalise
     """
 
-    eigenvalues, eigenvectors = np.linalg.eigh(matrix)
+    eigenvalues, eigenvectors = np.linalg.eig(matrix)
 
-    return eigenvalues, eigenvectors
+    sorted_indices = np.argsort(np.real(eigenvalues))
+
+    sorted_eigenvalues = eigenvalues[sorted_indices]
+    sorted_eigenvectors = eigenvectors[:, sorted_indices]
+
+    return sorted_eigenvalues, sorted_eigenvectors
 
 def normalize_eigenvectors(eigenvectors, k_mesh, k_step):
     """
@@ -112,12 +118,10 @@ def normalize_eigenvectors(eigenvectors, k_mesh, k_step):
 
 # results
 relative_mass = 0.108 * 5.68568 # fs^2eV/nm^2
-dielectric_layer = 6.1
-dielectric_outside = 3.32
-state = 1
-thickness_layer = 0.636
-
-E_gap = 0
+dielectric_layer = 3.32
+dielectric_outside = 6.1
+l_quantum_number = 0
+thickness_layer = 0.636 # nm
 
 k_min = 0.01
 k_max = 5
@@ -130,7 +134,7 @@ theta_max = 2 * np.pi
 number_points_theta = 250
 theta_mesh = np.linspace(theta_min, theta_max, number_points_theta, endpoint=False)
 theta_step = (theta_mesh[-1] - theta_mesh[0]) / (len(theta_mesh))
-wannier_matrix = compute_wannier_matrix(relative_mass, k_mesh, k_step, dielectric_layer, dielectric_outside, state, thickness_layer, theta_mesh, theta_step)
+wannier_matrix = compute_wannier_matrix(relative_mass, k_mesh, k_step, dielectric_layer, dielectric_outside, l_quantum_number, thickness_layer, theta_mesh, theta_step)
 eigenvalues, eigenvectors = diagonalize_matrix(wannier_matrix)
 
 # normalize the eigenvectors
@@ -139,7 +143,7 @@ norm_eigenvectors = normalize_eigenvectors(eigenvectors, k_mesh, k_step)
 # print the eigenvalues of the low energy states
 print('The Exciton Binding Energies are: ')
 for level in range(5):
-    print(f'    The exciton level {level + 1}s has a binding energy of: {int(eigenvalues[level] * -1000)} meV')
+    print(f'    The exciton level {level + 1}s has a binding energy of: {int(np.real(eigenvalues[level]) * -1000)} meV')
 
 # plot the results
 fig, ax = plt.subplots(2, 1, figsize=(4, 5))
@@ -148,22 +152,24 @@ ax[0].set_ylabel('Exciton binding energy (meV)')
 ax[0].set_xlabel('Excitonic level')
 
 ax[1].set_title('Eigenvectors')
-ax[1].set_ylabel('$\left| \\Psi \\right|^{2}$')
+ax[1].set_ylabel('$\\Psi$ (nm$^{-1}$)')
 ax[1].set_xlabel('Momentum (nm$^{-1}$)')
 
 ax[0].set_xlim(0, 6)
 
 ax[0].plot([1, 2, 3, 4, 5], eigenvalues[0:5] * -1000, marker='o', linestyle='')
 
-ax[1].set_xlim(0, 1)
+ax[1].set_xlim(-0.75, 0.75)
 
+colors = ['lightcoral', 'goldenrod', 'cornflowerblue']
 for x in range(3):
-    ax[1].plot(k_mesh, np.abs(norm_eigenvectors[x][:])**2, label=f'{x + 1}s')
+    ax[1].plot(k_mesh, norm_eigenvectors[x][:], color=colors[x], alpha=0.8, label=f'{x + 1}$s$')
+    ax[1].plot(-k_mesh[:], norm_eigenvectors[x][:], color=colors[x], alpha=0.8)
 
 ax[1].legend(frameon=False)
 
 before = [1, 2, 3, 4, 5]
-after = ['1s', '2s', '3s', '4s', '5s']
+after = ['1$s$', '2$s$', '3$s$', '4$s$', '5$s$']
 ax[0].set_xticks(ticks=before, labels=after)
 
 plt.tight_layout()
