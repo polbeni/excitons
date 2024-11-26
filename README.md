@@ -1,5 +1,5 @@
 # Excitons modelling
-Repository for code related with excitons modelling
+Repository for code related with excitons modeling
 
 
 ## Authors
