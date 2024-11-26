@@ -18,7 +18,7 @@ def compute_wannier_matrix(m_r, k_mesh, k_step, dielec_layer, dielec_out, l_quan
         k_step -> step in the k_mesh (homogeneous mesh assumed)
         dielec_layer -> dielectric constant of the monolayer
         dielec_out -> dielectric constant of the surroundings of the layer
-        l_quantum_number -> the azimuthal quantum number of the excitonic system (L=0: s, L=1: p, ...)
+        l_quantum_number -> the angular quantum number of the excitonic system (L=0: s, L=1: p, ...)
         thick_layer -> thickness of the monolayer
         theta_mesh -> array with the mesh of the theta angle
         theta_step -> step in the theta_mesh (homogeneous mesh assumed)
@@ -59,7 +59,7 @@ def pot_rt(q_element, dielec_layer, dielec_out, thick_layer, l_quantum_number, t
         dielec_layer -> dielectric constant of the monolayer
         dielec_out -> dielectric constant of the surroundings of the layer
         thick_layer -> thickness of the monolayer
-        l_quantum_number -> the azimuthal quantum number of the excitonic system (L=0: s, L=1: p, ...)
+        l_quantum_number -> the angular quantum number of the excitonic system (L=0: s, L=1: p, ...)
         theta_i -> the theta angle for the correspondent term in the sum
     """
 
@@ -91,26 +91,24 @@ def diagonalize_matrix(matrix):
 
     return sorted_eigenvalues, sorted_eigenvectors
 
-def normalize_eigenvectors(eigenvectors, k_mesh, k_step):
+def normalize_eigenvectors(eigenvectors, k_mesh):
     """
     Normalize the eigenvectors (wavefunctions)
 
     Inputs:
         eigenvectors -> eigenvectors solution of the Wannier Equation
         k_mesh -> our mesh of k
-        k_step -> the step of the k-mesh
     """
 
     norm_eigenvectors = []
 
     for i_it in range(len(k_mesh)):
-        norm = 0
-        for j_it in range(len(k_mesh)):
-            norm = norm + ((1 / (2*np.pi))*k_mesh[j_it]*k_step*(np.absolute(eigenvectors[j_it, i_it])**2))
-        
+        int_value = np.trapz(np.abs(eigenvectors[:, i_it])**2, k_mesh)
+        norm = (2 * np.pi) * np.sqrt(1 / (2 * int_value))
+
         norm_eigen = []
         for j_it in range(len(k_mesh)):
-            norm_eigen.append(eigenvectors[j_it, i_it] / norm)
+            norm_eigen.append(eigenvectors[j_it, i_it] * norm)
 
         norm_eigenvectors.append(norm_eigen)
 
@@ -138,7 +136,7 @@ wannier_matrix = compute_wannier_matrix(relative_mass, k_mesh, k_step, dielectri
 eigenvalues, eigenvectors = diagonalize_matrix(wannier_matrix)
 
 # normalize the eigenvectors
-norm_eigenvectors = normalize_eigenvectors(eigenvectors, k_mesh, k_step)
+norm_eigenvectors = normalize_eigenvectors(eigenvectors, k_mesh)
 
 # print the eigenvalues of the low energy states
 print('The Exciton Binding Energies are: ')
